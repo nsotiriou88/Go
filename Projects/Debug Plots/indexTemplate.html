@@ -1,0 +1,27 @@
+{{/* Template to load plots */}}    
+{{define "plottingTemplate"}}
+    <p>From Anchor <b>{{.}}</b> Plots</p>
+    <img src="dist_{{.}}.png" alt="{{.}} distance">
+    <img src="rssi_{{.}}.png" alt="{{.}} rssi">
+    <img src="rssi2_{{.}}.png" alt="{{.}} rssi2">
+{{end}}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Title}}</title>
+    <meta http-equiv="refresh" content="3" >
+<style>
+</style>
+</head>
+<body>
+<!--copy this to the working directory if using the Plot debugging in summary.go-->
+<header><b>{{.Header}}</b></header>
+<p> {{.Description}}</p>
+
+<p> {{range .Anchors}}
+        {{template "plottingTemplate" .}}
+    {{end}}
+</p>
+</body>
+</html>
