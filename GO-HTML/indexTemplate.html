@@ -1,0 +1,33 @@
+<!--copy this to the working directory if using the Plot debugging in summary.go-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{{.Title}}</title>
+        <meta http-equiv="refresh" content="15.7">
+        <style>
+</style>
+</head>
+
+<body>
+    <header><b>{{.Header}}</b></header>
+    <p> {{.Description}}</p>
+    
+    <form>
+        <input type="button" value="Browse Tags"
+        onclick="window.location.href='../Tags_Index.html'"
+        />
+    </form>
+    
+{{/* Template to load plots */}}
+<p> {{range $idx := .Anchors}}
+        <p>Plots from Anchor: <b>{{$idx}}</b> -- (<b>{{index $.Samples $idx}}</b> samples)</p>
+        <img src="dist_{{$idx}}.png" alt="{{$idx}} distance">
+        <img src="rssi_{{$idx}}.png" alt="{{$idx}} rssi">
+        <img src="rssi2_{{$idx}}.png" alt="{{$idx}} rssi2">
+        <img src="tqf_{{$idx}}.png" alt="{{$idx}} tqf">
+        <img src="tqf2_{{$idx}}.png" alt="{{$idx}} tqf2">
+    {{end}}
+</p>
+</body>
+</html>
