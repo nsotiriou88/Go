@@ -1,18 +1,18 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
-	// Support for SQLite3
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/gorilla/mux"
 )
 
 // Coupon Structure
 type Coupon struct {
+	ID      string  `json:"id"`
 	Name    string  `json:"name"`
 	Brand   string  `json:"brand"`
 	Value   float64 `json:"value"`
@@ -21,60 +21,81 @@ type Coupon struct {
 }
 
 // Coupons can be also exported and used outside the Package main
-type Coupons []Coupon
+var Coupons []Coupon
 
-func databaseQuery() [][]byte {
-	var fetchedCoupons [][]byte
+// Delete All Coupons Endpoint
+func getCouponsEndpoint(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: All Coupons Endpoint")
 
-	conn, err := sql.Open("sqlite3", "coupons.db")
-	if err != nil {
-		log.Println("Failed to connect to database:")
-		log.Println(err)
+	for _, item := range Coupons {
+		json.NewEncoder(w).Encode(item)
 	}
-
-	rows, err := conn.Query("SELECT coupon FROM coupons")
-	if err != nil {
-		log.Println("Failed to query settings database:")
-		log.Println(err)
-	}
-
-	var res []byte
-
-	for rows.Next() {
-		err = rows.Scan(&res)
-		fetchedCoupons = append(fetchedCoupons, res)
-	}
-
-	return fetchedCoupons
 }
 
-func allCoupons(w http.ResponseWriter, r *http.Request) {
-	fetchedCoupons := databaseQuery()
-	var coupons Coupon
+// Get Specific Coupon Endpoint
+func getCouponEndpoint(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: Simple Coupon Endpoint")
+	params := mux.Vars(r)
 
-	for _, val := range fetchedCoupons {
-		json.Unmarshal(val, &Coupon)
+	for _, item := range Coupons {
+		if item.ID == params["id"] { // Can use brand etc.
+			json.NewEncoder(w).Encode(item)
+			return
+		}
 	}
-	coupons := Coupons{
-		Coupon{Name: "Save £20 at Tesco", Brand: "Tesco", Value: 20.0, Created: "2018-03-01 10:15:53", Expiry: "2019-03-01 10:15:53"},
-		Coupon{Name: "Save £20 at Tesco", Brand: "Tesco", Value: 20.0, Created: "2018-03-01 10:15:53", Expiry: "2019-03-01 10:15:53"},
-	}
+	json.NewEncoder(w).Encode(&Coupon{})
+}
 
-	fmt.Println("Endpoint Hit: All Coupons Endpoint")
-	json.NewEncoder(w).Encode(coupons)
+// Create Coupon Endpoint
+func createCouponEndpoint(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: Create Coupon Endpoint")
+	params := mux.Vars(r)
+	var coupon Coupon
+
+	_ = json.NewDecoder(r.Body).Decode(&coupon)
+
+	coupon.ID = params["id"]
+	tempTime := time.Now()
+	coupon.Created = tempTime.Format("2018-03-01 10:15:53")
+	coupon.Expiry = tempTime.AddDate(0, 3, 0).Format("2018-03-01 10:15:53") //expire in 3 months from creation
+	Coupons = append(Coupons, coupon)
+
+	json.NewEncoder(w).Encode(Coupons)
+}
+
+// Delete Coupon Endpoint
+func deleteCouponEndpoint(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Endpoint Hit: Delete Coupon Endpoint")
+	params := mux.Vars(r)
+
+	for index, item := range Coupons {
+		if item.ID == params["id"] { // Can use brand etc.
+			Coupons = append(Coupons[:index], Coupons[index+1:]...)
+			break
+		}
+	}
+	json.NewEncoder(w).Encode(Coupons)
 }
 
 // The homepage endpoint
-func homePage(w http.ResponseWriter, r *http.Request) {
+func homePageEndpoint(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Homepage Endpoint Hit")
 }
 
+// Handler for requests
 func handleRequests() {
-	http.HandleFunc("/", homePage)
-	http.HandleFunc("/coupons", allCoupons)
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	router := mux.NewRouter()
+	router.HandleFunc("/", homePageEndpoint)
+	router.HandleFunc("/coupons", getCouponsEndpoint).Methods("GET")
+	router.HandleFunc("/coupons/{id}", getCouponEndpoint).Methods("GET")
+	router.HandleFunc("/coupons/{id}", createCouponEndpoint).Methods("POST")
+	router.HandleFunc("/coupons/{id}", deleteCouponEndpoint).Methods("DELETE")
+	log.Fatal(http.ListenAndServe(":8081", router))
 }
 
+// Main body running
 func main() {
+	Coupons = append(Coupons, Coupon{ID: "1", Name: "Save £20 at Tesco", Brand: "Tesco", Value: 20.0, Created: "2018-03-01 10:15:53", Expiry: "2019-03-01 10:15:53"})
+	Coupons = append(Coupons, Coupon{ID: "2", Name: "15% off at Booking.com", Brand: "Booking.com", Value: 0.15, Created: "2018-03-01 10:15:53", Expiry: "2019-03-01 10:15:53"})
 	handleRequests()
 }
